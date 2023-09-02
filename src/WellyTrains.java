@@ -12,16 +12,16 @@ import javax.swing.JOptionPane;
 
 import ecs100.UI;
 
-public class UserInterface {
+public class WellyTrains {
 
   private final HashMap<String, Station> stations = new HashMap<>();
   private final HashMap<String, TrainLine> trainLines = new HashMap<>();
   private final HashMap<Integer, Double> fares = new HashMap<>();
 
-  private final JButton timeButton;
-  private final JButton currentStationBtn;
-  private final JButton destStationBtn;
-  private final JButton listAllLinesBtn;
+  private JButton timeButton;
+  private JButton currentStationBtn;
+  private JButton destStationBtn;
+  private JButton listAllLinesBtn;
 
   private double pressedX = 0;
   private double pressedY = 0;
@@ -30,7 +30,7 @@ public class UserInterface {
   private String destinationStationName = "Waikanae";
   private String currentTime = "1530";
 
-  public UserInterface() {
+  public void setupUserInterface() {
     UI.initialise();
     UI.setWindowSize(1000, 750);
     UI.addButton("Clear", () -> {
@@ -55,7 +55,6 @@ public class UserInterface {
 
     UI.addButton("Find a route from Current to Destination", this::findARoute);
 
-    this.loadAllData();
     this.resetScreen();
     UI.setMouseListener(this::mouseListener);
   }
@@ -73,6 +72,30 @@ public class UserInterface {
     this.currentTime = timeInput;
 
     // Validate the time input
+    // It will be in string HHMM form but it should still be a valid time
+    // E.g. 1530 is valid but 2560 is not
+
+    // Here are a few checks but I am sure there are more
+
+    if (timeInput.length() != 4) { // stops 124
+      UI.println("Invalid time");
+      return;
+    }
+
+    if (timeInput.charAt(2) > '5') { // stops 2360
+      UI.println("Invalid time");
+      return;
+    }
+
+    if (timeInput.charAt(0) > '2') { // stops 3230
+      UI.println("Invalid time");
+      return;
+    }
+
+    if (timeInput.charAt(0) == '2' && timeInput.charAt(1) > '3') { // stops 2400
+      UI.println("Invalid time");
+      return;
+    }
 
     timeButton.setText("Time: " + timeInput.toString());
     // UI.printMessage("You entered time: " + time);
@@ -119,6 +142,13 @@ public class UserInterface {
         int currentStationIdx = trainLine.getStations().indexOf(currentStation);
         int destinationStationIdx = trainLine.getStations().indexOf(destinationStation);
 
+        // TODO: handle behaviour here
+        // if (destinationStationIdx == -1) {
+        // UI.println("This train does not stop at " + destinationStationName);
+        // // break;
+        // // skip this line and try the next line
+        // }
+
         if (currentStationIdx < destinationStationIdx) {
           // UI.println("You are travelling in the right direction");
 
@@ -126,23 +156,31 @@ public class UserInterface {
 
           for (TrainService trainService : trainLine.getTrainServices()) {
 
-            if (trainService.getTimes().get(currentStationIdx) >= Integer.parseInt(currentTime)) {
-              // UI.println("Found a service at or after the current time");
+            if (trainService.getTimes().get(destinationStationIdx) > -1) {
+              // UI.println("Found a service that stops at the destination station");
 
-              UI.println("Leaves " + currentStationName + " at " + trainService.getTimes().get(currentStationIdx));
-              UI.println("Arrives " + destinationStationName + " at "
-                  + trainService.getTimes().get(destinationStationIdx));
+              if (trainService.getTimes().get(currentStationIdx) >= Integer.parseInt(currentTime)) {
+                // UI.println("Found a service at or after the current time");
 
-              int zoneDifference = destinationStation.getZone() - currentStation.getZone();
-              if (zoneDifference <= 0) {
-                zoneDifference = 1;
+                UI.println("Leaves " + currentStationName + " at " + trainService.getTimes().get(currentStationIdx));
+                UI.println("Arrives " + destinationStationName + " at "
+                    + String.valueOf(trainService.getTimes().get(destinationStationIdx)));
+
+                int zoneDifference = destinationStation.getZone() - currentStation.getZone();
+                if (zoneDifference <= 0) {
+                  zoneDifference = 1;
+                }
+                double fare = fares.get(zoneDifference);
+
+                UI.printf("Fare: $%.2f (%d zones)\n", fare, zoneDifference);
+
+                break;
               }
-              double fare = fares.get(zoneDifference);
 
-              UI.printf("Fare: $%.2f (%d zones)", fare, zoneDifference);
-
-              break;
+            } else {
+              // UI.println("This train does not stop at " + destinationStationName);
             }
+
           }
 
         } else {
@@ -150,6 +188,9 @@ public class UserInterface {
         }
       }
     }
+
+    // TODO: handle if there is a -1 on the stattion!
+    // then the train is not stopping at that station
 
     if (!onSameLine) {
       UI.println("No match. You will have to transfer lines");
@@ -559,13 +600,14 @@ public class UserInterface {
 
   //
   /**
-   * Method to get a string from a dialog box with a list of options
+   * Not my code.
    *
-   * Method written by VUW faculty for COMP102 assignment
+   * Method to get a string from a dialog box with a list of options
+   * Written by VUW faculty for COMP103 assignment 2023
    *
    * Just used for choosing station without typing.
    *
-   * Can also select station from UI map (my code)
+   * Can also select current station from UI map (Andy's code)
    */
   public String getOptionFromList(final String question, final Collection<String> options) {
     final Object[] possibilities = options.toArray();
@@ -575,7 +617,9 @@ public class UserInterface {
   }
 
   public static void main(final String[] args) {
-    new UserInterface();
+    WellyTrains welllyTrains = new WellyTrains();
+    welllyTrains.setupUserInterface();
+    welllyTrains.loadAllData();
   }
 
 }
