@@ -37,8 +37,6 @@ public class UserInterface {
       this.resetScreen();
     });
 
-    UI.addButton("Load fares", this::loadFares);
-
     UI.addButton("All Stations in Region", this::showAllStations);
     UI.addButton("All Train Lines in Region", this::showAllTrainLines);
     UI.addButton("Show All Info For All Train Lines", this::showAllInfoAllLines);
@@ -60,6 +58,11 @@ public class UserInterface {
     this.loadAllData();
     this.resetScreen();
     UI.setMouseListener(this::mouseListener);
+  }
+
+  public void resetGraphicsPane() {
+    UI.clearGraphics();
+    UI.drawImage("data/system-map.png", 0, 0);
   }
 
   public void setCurrentTime() {
@@ -129,6 +132,15 @@ public class UserInterface {
               UI.println("Leaves " + currentStationName + " at " + trainService.getTimes().get(currentStationIdx));
               UI.println("Arrives " + destinationStationName + " at "
                   + trainService.getTimes().get(destinationStationIdx));
+
+              int zoneDifference = destinationStation.getZone() - currentStation.getZone();
+              if (zoneDifference <= 0) {
+                zoneDifference = 1;
+              }
+              double fare = fares.get(zoneDifference);
+
+              UI.printf("Fare: $%.2f (%d zones)", fare, zoneDifference);
+
               break;
             }
           }
@@ -172,7 +184,7 @@ public class UserInterface {
 
     if ("released".equals(action)) {
 
-      UI.println(pressedX + " " + pressedY + " " + x + " " + y);
+      // UI.println(pressedX + " " + pressedY + " " + x + " " + y);
 
       // UI.printMessage("(x > " + pressedX + ") && (x < " + x + ") && (y > " +
       // pressedY + ") && (y < " + y + ")");
@@ -205,7 +217,6 @@ public class UserInterface {
       }
 
       this.detectClickOnStation(x, y);
-
     }
   }
 
@@ -214,21 +225,25 @@ public class UserInterface {
    * by searching through the stations and checking if the x and y coordinates
    */
   public void detectClickOnStation(double x, double y) {
-    UI.println("detectClickOnStation");
-    // UI.println(x + " " + y);
-    // UI.println("detectClickOnStation");
-
     stations.forEach((k, v) -> {
 
       if ((x > v.getLeftEdge()) && (x < v.getRightEdge()) && (y > v.getTopEdge()) && (y < v.getBottomEdge())) {
         UI.println("Clicked on " + v.getName());
         this.printLinesForStation(v.getName());
 
+        this.resetGraphicsPane();
+        this.currentStationName = v.getName();
+        currentStationBtn.setText("Current Station: " + currentStationName);
+        drawBoxAroundStationName(v.getName());
         UI.drawRect(v.getLeftEdge(), v.getTopEdge(), v.calculateWidth(), v.calculateHeight());
       }
-
     });
+  }
 
+  public void drawBoxAroundStationName(String stationName) {
+    this.resetGraphicsPane();
+    Station s = stations.get(stationName);
+    UI.drawRect(s.getLeftEdge(), s.getTopEdge(), s.calculateWidth(), s.calculateHeight());
   }
 
   public void printStationsOnTrainLine(final TrainLine trainLine) {
@@ -237,7 +252,6 @@ public class UserInterface {
       UI.println("  " + station.getName());
     });
     UI.println();
-
   }
 
   public void printInstructions() {
@@ -273,6 +287,15 @@ public class UserInterface {
     }
   }
 
+  /*
+   * Reads the fares.data file and loads the data into the fares HashMap
+   *
+   * Format:
+   *
+   * zone fare
+   * 1 2.50
+   * 2 4.00
+   */
   public void loadFares() {
 
     Scanner sc;
@@ -293,20 +316,23 @@ public class UserInterface {
     } catch (FileNotFoundException e) {
       e.printStackTrace();
     }
-
-    fares.forEach((k, v) -> {
-      UI.println("zone: " + k + " $" + v);
-    });
-
   }
 
+  /*
+   * Runs at the start of the program to load all the data
+   * into the HashMaps
+   */
   public void loadAllData() {
     this.loadStationData();
     this.loadTrainLineData();
     this.loadServiceData();
     this.loadStationCoordinates();
+    this.loadFares();
   }
 
+  /*
+   * Prints all the info for all the lines
+   */
   public void showAllInfoAllLines() {
     trainLines.forEach((k, v) -> {
       UI.println(k);
@@ -322,6 +348,10 @@ public class UserInterface {
     UI.println();
   }
 
+  /*
+   * Reads the station-coords.data file and loads the data into the stations
+   * I have added extra fields in the Station class to accomodate this data
+   */
   public void loadStationCoordinates() {
     String dataFile = "data/station-coords.data";
     Scanner sc;
@@ -435,7 +465,6 @@ public class UserInterface {
         final int zone = sc.nextInt();
         final double distance = sc.nextDouble();
         stations.put(name, new Station(name, zone, distance));
-        // UI.println(name + " " + " zone: " + zone + " / dist: " + distance);
       }
 
     } catch (final FileNotFoundException e) {
@@ -504,12 +533,10 @@ public class UserInterface {
     if (name == null) {
       return;
     }
-    // Popup
-    // UI.println("Setting current station to " + name);
     currentStationName = name;
     currentStationBtn.setText("Current Station: " + currentStationName);
     listAllLinesBtn.setText("List All Lines through " + this.currentStationName);
-    // displayCurrentValues();
+    drawBoxAroundStationName(currentStationName);
   }
 
   /**
