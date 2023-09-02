@@ -4,382 +4,509 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Scanner;
+import java.util.Set;
+
+import javax.swing.JButton;
+import javax.swing.JOptionPane;
 
 import ecs100.UI;
 
 public class UserInterface {
 
-	HashMap<String, Station> stations = new HashMap<>();
-	HashMap<String, TrainLine> trainLines = new HashMap<>();
+  private final HashMap<String, Station> stations = new HashMap<>();
+  private final HashMap<String, TrainLine> trainLines = new HashMap<>();
 
-	double pressedX = 0;
-	double pressedY = 0;
-	private String currentStationName = "Wellington";
-	private String destinationStationName = "Waikanae";
+  private final JButton timeButton;
 
-	public UserInterface() {
-		UI.initialise();
-		UI.setWindowSize(1500, 750);
-		UI.addButton("Clear", () -> {
-			this.resetScreen();
-		});
-//		UI.addButton("Load All Data", () -> {
-//			this.loadStationData();
-//			this.loadTrainLineData();
-//			this.loadServiceData();
-//		});
-//		UI.addButton("Load Station Data", this::loadStationData);
-//		UI.addButton("Load TrainLine Data", this::loadTrainLineData);
-//		UI.addButton("Load Service Data", this::loadServiceData);
-		UI.addButton("All Stations in Region", this::showAllStations);
-		UI.addButton("All Train Lines in Region", this::showAllTrainLines);
-		UI.addButton("Show All Info For All Train Lines", this::showAllInfoAllLines);
+  private double pressedX = 0;
+  private double pressedY = 0;
 
-		UI.addButton("Choose Current Station", this::setCurrentStation);
-		UI.addButton("Choose Destination Station", this::setDestinationStation);
+  private String currentStationName = "Wellington";
+  private String destinationStationName = "Waikanae";
+  private String currentTime = "1530";
 
-		UI.addButton("List All Lines through station", this::listAllLinesThroughStation);
+  public UserInterface() {
+    UI.initialise();
+    UI.setWindowSize(1000, 750);
+    UI.addButton("Clear", () -> {
+      this.resetScreen();
+    });
 
-		UI.addButton("Find a route from Current to Destination", this::findARoute);
+    UI.addButton("All Stations in Region", this::showAllStations);
+    UI.addButton("All Train Lines in Region", this::showAllTrainLines);
+    UI.addButton("Show All Info For All Train Lines", this::showAllInfoAllLines);
+    UI.addButton("Choose Current Station", this::setCurrentStation);
+    UI.addButton("Choose Destination Station", this::setDestinationStation);
+    UI.addButton("List All Lines through station", this::listAllLinesThroughStation);
+    UI.addButton("Find a route from Current to Destination", this::findARoute);
+    UI.addButton("Print lines through current station", this::printSimpleLinesForStation);
 
-		this.loadAllData();
-		this.resetScreen();
-		UI.setMouseListener(this::mouseListener);
-	}
+    timeButton = UI.addButton("Set Time", this::setCurrentTime);
 
-	public void findARoute() {
-		UI.println("Finding route from " + currentStationName + " to " + destinationStationName);
-	}
+    this.loadAllData();
+    this.resetScreen();
+    UI.setMouseListener(this::mouseListener);
+  }
 
-	public void listAllLinesThroughStation() {
-		this.printLinesForStation(currentStationName);
-	}
+  public void setCurrentTime() {
 
-	public void resetScreen() {
-		UI.clearText();
-		UI.drawImage("data/system-map.png", 0, 0);
-	}
+    // Ask the user for time input
+    final String timeInput = JOptionPane.showInputDialog(null, "Enter the time in format HHMM", "1530",
+        JOptionPane.PLAIN_MESSAGE);
+    this.currentTime = timeInput;
 
-	public void mouseListener(String action, double x, double y) {
+    // Validate the time input
 
-//		UI.println(action);
-		if (action.equals("pressed")) {
-			pressedX = x;
-			pressedY = y;
-//			UI.println("X: " + x);
-//			UI.println("y: " + y);
+    timeButton.setText(timeInput.toString());
+    // UI.printMessage("You entered time: " + time);
+  }
 
-		}
-		if (action.equals("released")) {
-//			UI.printMessage("TL: " + pressedX + " " + pressedY + " BR: " + x + " " + y);
-			UI.printMessage("(x > " + pressedX + ") && (x < " + x + ") && (y > " + pressedY + ") && (y < " + y + ")");
+  public void timeInputListener(final String time) {
+    // UI.println(time);
+    this.currentTime = time;
+  }
 
-			if ((x > 16.0) && (x < 159.0) && (y > 417.0) && (y < 434.0)) {
-//				UI.print(trainLines.get("Johnsonville_Wellington"));
-				this.printStationsOnTrainLine(trainLines.get("Johnsonville_Wellington"));
-				this.printStationsOnTrainLine(trainLines.get("Wellington_Johnsonville"));
+  public void findARoute() {
+    boolean onSameLine = false;
 
-			}
-			if ((x > 123.0) && (x < 266.0) && (y > 284.0) && (y < 301.0)) {
-				this.printStationsOnTrainLine(trainLines.get("Waikanae_Wellington"));
-				this.printStationsOnTrainLine(trainLines.get("Wellington_Waikanae"));
-			}
+    UI.println("Finding route from " + currentStationName + " to " + destinationStationName);
 
-			if ((x > 238.0) && (x < 381.0) && (y > 251.0) && (y < 268.0)) {
-				this.printStationsOnTrainLine(trainLines.get("Upper-Hutt_Wellington"));
-				this.printStationsOnTrainLine(trainLines.get("Wellington_Upper-Hutt"));
-			}
+    // Find out if they share a line
 
-			if ((x > 256.0) && (x < 372.0) && (y > 428.0) && (y < 446.0)) {
-				this.printStationsOnTrainLine(trainLines.get("Melling_Wellington"));
-				this.printStationsOnTrainLine(trainLines.get("Wellington_Melling"));
+    Set linesForStation1 = stations.get(currentStationName).getTrainLines();
+    Set linesForStation2 = stations.get(destinationStationName).getTrainLines();
 
-			}
+    for (Object trainLineThroughStation1 : linesForStation1) { // TODO: work out why I can't use TrainLine here
+      // UI.println(tl.toString());
+      if (linesForStation2.contains(trainLineThroughStation1)) {
+        onSameLine = true;
+        UI.println("Match on " + trainLineThroughStation1);
 
-			if ((x > 308.0) && (x < 484.0) && (y > 16.0) && (y < 36.0)) {
-				this.printStationsOnTrainLine(trainLines.get("Masterton_Wellington"));
-				this.printStationsOnTrainLine(trainLines.get("Wellington_Masterton"));
-			}
+        for (int i = 0; i < linesForStation1.size(); i++) {
+          UI.println(i + " " + trainLineThroughStation1);
 
-			if ((x > 40.0) && (x < 121.0) && (y > 528.0) && (y < 544.0)) {
-//				stations.forEach((k, v) -> {
-//					UI.println(k);
-//				});
-				this.printLinesForStation("Simla-Crescent");
+          // TODO: up to here
+          // Need to get the lines that they are on and get the index of current station
+          // and destination station
+          // THe correct line /direction is the one where the currentSTation index <
+          // destination station index
+        }
 
-				UI.drawRect(40, 528, 100, 15);
-			}
+      }
+    }
+    if (!onSameLine) {
+      UI.println("No match. You will have to transfer from ");
+      // TODO: " current_station.line + " to " + destination_station.line
 
-			if ((x > 408.0) && (x < 468.0) && (y > 120.0) && (y < 139.0)) {
-				this.printLinesForStation("Carterton");
-			}
+    }
 
-			if ((x > 248.0) && (x < 394.0) && (y > 656.0) && (y < 679.0)) {
-				this.printLinesForStation("Wellington");
-			}
-		}
-	}
+    // if they do, find the one that comes after the other one
 
-	public void printStationsOnTrainLine(TrainLine trainLine) {
-		UI.println("Stations on the " + trainLine.getName() + " line");
-		trainLine.getStations().forEach((station) -> {
-//		trainLines.get(trainLine).getStations().forEach((station) -> {
-			UI.println("  " + station.getName());
-		});
-		UI.println();
+    // if they don't, show an error to user
+    // use the complex version to use recursion to get a path from one station to
+    // another
 
-	}
+  }
 
-	public void printInstructions() {
-		UI.println("Click on the train line header to list stations on that line");
-	}
+  public void displayStationsInStatusBar() {
+    UI.printMessage("Current: " + currentStationName + " | " + " Destination: " + destinationStationName);
+  }
 
-	public void printLinesForStation(String stationName) {
-		Station s = stations.get(stationName);
-		// distance from start?
-		UI.println("In Zone " + s.getZone());
-		UI.println("On Lines");
-		for (TrainLine tl : s.getTrainLines()) {
-			UI.println("- " + tl.getName());
-			for (int i = 0; i < tl.getStations().size(); i++) {
-				UI.print("   " + i + ". ");
+  public void listAllLinesThroughStation() {
+    this.printLinesForStation(currentStationName);
+  }
 
-				UI.print(tl.getStations().get(i).getName());
+  public void resetScreen() {
+    // UI.clearText();
+    UI.drawImage("data/system-map.png", 0, 0);
+  }
 
-				if (tl.getStations().get(i).getName().equals(s.getName())) {
-					UI.println(" ***");
-				} else {
-					UI.println();
-				}
-			}
-		}
-	}
+  public void mouseListener(final String action, final double x, final double y) {
 
-	public void loadAllData() {
-		this.loadStationData();
-		this.loadTrainLineData();
-		this.loadServiceData();
-	}
+    if ("pressed".equals(action)) {
+      pressedX = x;
+      pressedY = y;
 
-	public void showAllInfoAllLines() {
-		trainLines.forEach((k, v) -> {
-			UI.println(k);
-			for (TrainService service : v.getTrainServices()) {
-				UI.println("ID: " + service.getTrainID());
-				for (Integer time : service.getTimes()) {
-					UI.println(time);
-				}
-//				UI.println("-end of service-");
-			}
-		});
-		UI.println("====");
-		UI.println();
-	}
+    }
+    if ("released".equals(action)) {
 
-	/*
-	 * Open the -services.data file for each line and build that data into the train
-	 * line
-	 *
-	 * E.g. Masterton_Wellington-services.data
-	 *
-	 *
-	 * 550 556 602 604 607 610 612 614 616 619 621 623 626 628 630 633 635
-	 *
-	 * 608 614 620 622 625 628 630 632 634 637 639 641 644 646 648 651 653
-	 */
-	public void loadServiceData() {
+      UI.println(pressedX + " " + pressedY + " " + x + " " + y);
 
-		trainLines.forEach((k, v) -> {
-			try {
+      // UI.printMessage("(x > " + pressedX + ") && (x < " + x + ") && (y > " +
+      // pressedY + ") && (y < " + y + ")");
 
-				Scanner sc = new Scanner(new File("data/" + k + "-services.data"));
-				TrainLine tl = trainLines.get(k);
+      if ((x > 16.0) && (x < 159.0) && (y > 417.0) && (y < 434.0)) {
+        // UI.print(trainLines.get("Johnsonville_Wellington"));
+        this.printStationsOnTrainLine(trainLines.get("Johnsonville_Wellington"));
+        this.printStationsOnTrainLine(trainLines.get("Wellington_Johnsonville"));
 
-				TrainService tService;
+      }
+      if ((x > 123.0) && (x < 266.0) && (y > 284.0) && (y < 301.0)) {
+        this.printStationsOnTrainLine(trainLines.get("Waikanae_Wellington"));
+        this.printStationsOnTrainLine(trainLines.get("Wellington_Waikanae"));
+      }
 
-				while (sc.hasNextLine()) {
-					tService = new TrainService(v);
-					String line = sc.nextLine();
-					String[] times = line.split(" ");
-//					UI.println("line " + line);
-					boolean isFirstStop = false;
-					for (int i = 0; i < times.length; i++) {
+      if ((x > 238.0) && (x < 381.0) && (y > 251.0) && (y < 268.0)) {
+        this.printStationsOnTrainLine(trainLines.get("Upper-Hutt_Wellington"));
+        this.printStationsOnTrainLine(trainLines.get("Wellington_Upper-Hutt"));
+      }
 
-//						public void addTime(int time, boolean firstStop){
+      if ((x > 256.0) && (x < 372.0) && (y > 428.0) && (y < 446.0)) {
+        this.printStationsOnTrainLine(trainLines.get("Melling_Wellington"));
+        this.printStationsOnTrainLine(trainLines.get("Wellington_Melling"));
 
-						if (i == 0) {
-							isFirstStop = true;
-						} else {
-							isFirstStop = false;
-						}
-						tService.addTime(Integer.parseInt(times[i]), isFirstStop);
-//						tService.addTime(Integer.parseInt(times[i]), !(i == 0));
-					}
-					tl.addTrainService(tService);
+      }
 
-				}
+      if ((x > 308.0) && (x < 484.0) && (y > 16.0) && (y < 36.0)) {
+        this.printStationsOnTrainLine(trainLines.get("Masterton_Wellington"));
+        this.printStationsOnTrainLine(trainLines.get("Wellington_Masterton"));
+      }
 
-			} catch (FileNotFoundException e) {
-				e.printStackTrace();
-			}
+      this.detectClickOnStation(x, y);
 
-		});
-	}
+      if ((x > 40.0) && (x < 121.0) && (y > 528.0) && (y < 544.0)) {
+        this.printLinesForStation("Simla-Crescent");
 
-	public void showAllTrainLines() {
-		UI.println("All Train Lines");
-		UI.println("---");
-		trainLines.forEach((k, v) -> {
-			UI.println(v.getName());
-		});
-	}
+        UI.drawRect(40, 528, 100, 15);
+      }
 
-	public void showAllStations() {
-		UI.println("All Stations");
-		UI.println("---");
-		stations.forEach((k, v) -> {
-			UI.println(v.getName() + " in zone " + v.getZone());
-		});
-	}
+      if ((x > 408.0) && (x < 468.0) && (y > 120.0) && (y < 139.0)) {
+        this.printLinesForStation("Carterton");
+      }
 
-	public void loadStationData() {
-		String dataFile = "data/stations.data";
-		Scanner sc;
+      if ((x > 248.0) && (x < 394.0) && (y > 656.0) && (y < 679.0)) {
+        this.printLinesForStation("Wellington");
+      }
+    }
+  }
 
-		try {
-			sc = new Scanner(new File(dataFile));
+  /*
+   * Detect if the user has clicked on a station
+   * by searching through the stations and checking if the x and y coordinates
+   */
+  public void detectClickOnStation(double x, double y) {
+    UI.println("detectClickOnStation");
+    // UI.println(x + " " + y);
+    // UI.println("detectClickOnStation");
 
-			while (sc.hasNextLine()) {
-				if (!sc.hasNext()) {
-					break;
-				}
-				String name = sc.next();
-				int zone = sc.nextInt();
-				double distance = sc.nextDouble();
-				stations.put(name, new Station(name, zone, distance));
-//				UI.println(name + " " + " zone: " + zone + " / dist: " + distance);
-			}
+    stations.forEach((k, v) -> {
+      // UI.println(v.getName());
+      UI.println(v.getTopLeft() + " " + v.getTopRight() + " " + v.getBottomLeft() + " " + v.getBottomRight());
 
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
-		UI.println("Stations loaded");
+      if ((x > v.getTopLeft()) && (x < v.getTopRight()) && (y > v.getBottomLeft()) && (y < v.getBottomRight())) {
+        // UI.println("Clicked on " + v.getName());
+        // this.printLinesForStation(v.getName());
 
-	}
+        // UI.drawRect(v.getTopLeft(), v.getBottomLeft(), v.getTopRight() -
+        // v.getTopLeft(),
+        // v.getBottomRight() - v.getBottomLeft());
+      }
+    });
 
-	public void loadTrainLineData() {
-		String dataFile = "data/train-lines.data";
-		Scanner sc;
+  }
 
-		try {
-			sc = new Scanner(new File(dataFile));
+  public void printStationsOnTrainLine(final TrainLine trainLine) {
+    UI.println("Stations on the " + trainLine.getName() + " line");
+    trainLine.getStations().forEach(station -> {
+      UI.println("  " + station.getName());
+    });
+    UI.println();
 
-			while (sc.hasNextLine()) {
-				if (!sc.hasNext()) {
-					break;
-				}
-				String name = sc.next();
-				trainLines.put(name, new TrainLine(name));
-			}
+  }
 
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
-		UI.println("Train Lines Loaded");
+  public void printInstructions() {
+    UI.println("Click on the train line header to list stations on that line");
+  }
 
-		this.loadStationsOnLine();
-	}
+  public void printSimpleLinesForStation() {
+    UI.println("-- Showing lines through " + currentStationName + " station --");
+    final Station s = stations.get(currentStationName);
+    for (final TrainLine tl : s.getTrainLines()) {
+      UI.println(tl.getName());
+    }
+  }
 
-	public void loadStationsOnLine() {
-		trainLines.forEach((trainLineKey, trainLineVal) -> {
-			Scanner sc;
-			try {
-				sc = new Scanner(new File("data/" + trainLineKey + "-stations.data"));
-				while (sc.hasNext()) {
+  public void printLinesForStation(final String stationName) {
+    final Station s = stations.get(stationName);
+    UI.println("Printing Lines that go through " + stationName + " station");
+    UI.println("In Zone " + s.getZone());
+    UI.println("On Lines");
+    for (final TrainLine tl : s.getTrainLines()) {
+      UI.println("- " + tl.getName());
+      for (int i = 0; i < tl.getStations().size(); i++) {
+        UI.print("   " + i + ". ");
 
-					// 1. add station to the trainLine
-					TrainLine trainLine = trainLines.get(trainLineKey);
-					String stationName = sc.next();
-					Station s = stations.get(stationName);
-					trainLine.addStation(s);
+        UI.print(tl.getStations().get(i).getName());
 
-					s.addTrainLine(trainLine);
+        if (tl.getStations().get(i).getName().equals(s.getName())) {
+          UI.println(" ***");
+        } else {
+          UI.println();
+        }
+      }
+    }
+  }
 
-//					Station station = stations.get(trainLineVal);
-//					station.addTrainLine(trainLineVal);
+  public void loadAllData() {
+    this.loadStationData();
+    this.loadTrainLineData();
+    this.loadServiceData();
+    this.loadStationCoordinates();
+  }
 
-//					UI.print("**" + trainLineKey + "** ");
-//					UI.println(sc.next());
-				}
-			} catch (FileNotFoundException e) {
-				e.printStackTrace();
-			}
-		});
-	}
+  public void showAllInfoAllLines() {
+    trainLines.forEach((k, v) -> {
+      UI.println(k);
+      for (final TrainService service : v.getTrainServices()) {
+        UI.println("ID: " + service.getTrainID());
+        for (final Integer time : service.getTimes()) {
+          UI.println(time);
+        }
+        // UI.println("-end of service-");
+      }
+    });
+    UI.println("====");
+    UI.println();
+  }
 
-	/**
-	 * Ask the user for a station name and assign it to the currentStationName field
-	 * Must pass a collection of the names of the stations to getOptionFromList
-	 */
-	public void setCurrentStation() {
-		String name = getOptionFromList("Choose current station", stations.keySet());
-		if (name == null) {
-			return;
-		}
-		// Popup
-		UI.println("Setting current station to " + name);
-		currentStationName = name;
-//		displayCurrentValues();
-	}
+  public void loadStationCoordinates() {
+    String dataFile = "data/station-coords.data";
+    Scanner sc;
 
-	/**
-	 * Ask the user for a destination station name and assign it to the
-	 * destinationName field Must pass a collection of the names of the stations to
-	 * getOptionFromList
-	 */
-	public void setDestinationStation() {
-		String name = getOptionFromList("Choose destination station", stations.keySet());
-		if (name == null) {
-			return;
-		}
-		UI.println("Setting destination station to " + name);
-		destinationStationName = name;
-//	    displayCurrentValues();
-	}
+    try {
+      sc = new Scanner(new File(dataFile));
 
-	/**
-	 * Ask the user for a subway line and assign it to the currentLineName field
-	 * Must pass a collection of the names of the lines to getOptionFromList
-	 */
-	public void setCurrentLine() {
-		String name = getOptionFromList("Choose current subway line", trainLines.keySet());
-		if (name == null) {
-			return;
-		}
-		UI.println("Setting current subway line to " + name);
-//	    currentLineName = name;
-//	    displayCurrentValues();
-	}
+      while (sc.hasNextLine()) {
+        if (!sc.hasNext()) {
+          break;
+        }
+        String name = sc.next();
+        double topLeft = sc.nextDouble();
+        double topRight = sc.nextDouble();
+        double bottomLeft = sc.nextDouble();
+        double bottomRight = sc.nextDouble();
 
-	//
-	/**
-	 * Method to get a string from a dialog box with a list of options
-	 *
-	 * Method written by VUW faculty for COMP102 assignment
-	 *
-	 * Just used for choosing station without typing.
-	 *
-	 * Can also select station from UI map (my code)
-	 */
-	public String getOptionFromList(String question, Collection<String> options) {
-		Object[] possibilities = options.toArray();
-		Arrays.sort(possibilities);
-		return (String) javax.swing.JOptionPane.showInputDialog(UI.getFrame(), question, "",
-				javax.swing.JOptionPane.PLAIN_MESSAGE, null, possibilities, possibilities[0].toString());
-	}
+        // UI.println("Here!");
 
-	public static void main(String[] args) {
-		new UserInterface();
-	}
+        // UI.println(name);
+        // UI.println(topLeft + " " + topRight + " " + bottomLeft + " " + bottomRight);
+        // UI.sleep(500);
+        stations.get(name).setCoords(topLeft, topRight, bottomLeft, bottomRight);
+        // UI.println(name + " " + " zone: " + zone + " / dist: " + distance);
+      }
+
+    } catch (FileNotFoundException e) {
+      e.printStackTrace();
+    }
+    UI.println("Station Coordinates loaded");
+  }
+
+  /*
+   * Open the -services.data file for each line and build that data into the train
+   * line
+   *
+   * E.g. Masterton_Wellington-services.data
+   *
+   *
+   * 550 556 602 604 607 610 612 614 616 619 621 623 626 628 630 633 635
+   *
+   * 608 614 620 622 625 628 630 632 634 637 639 641 644 646 648 651 653
+   */
+  public void loadServiceData() {
+
+    trainLines.forEach((k, v) -> {
+      try {
+
+        final Scanner sc = new Scanner(new File("data/" + k + "-services.data"));
+        final TrainLine tl = trainLines.get(k);
+
+        TrainService tService;
+
+        while (sc.hasNextLine()) {
+          tService = new TrainService(v);
+          final String line = sc.nextLine();
+          final String[] times = line.split(" ");
+          // UI.println("line " + line);
+          boolean isFirstStop = false;
+          for (int i = 0; i < times.length; i++) {
+
+            // public void addTime(int time, boolean firstStop){
+
+            if (i == 0) {
+              isFirstStop = true;
+            } else {
+              isFirstStop = false;
+            }
+            tService.addTime(Integer.parseInt(times[i]), isFirstStop);
+            // tService.addTime(Integer.parseInt(times[i]), !(i == 0));
+          }
+          tl.addTrainService(tService);
+
+        }
+
+      } catch (final FileNotFoundException e) {
+        e.printStackTrace();
+      }
+
+    });
+  }
+
+  public void showAllTrainLines() {
+    UI.println("All Train Lines");
+    UI.println("---");
+    trainLines.forEach((k, v) -> {
+      UI.println(v.getName());
+    });
+  }
+
+  public void showAllStations() {
+    UI.println("All Stations");
+    UI.println("---");
+    stations.forEach((k, v) -> {
+      UI.println(v.getName() + " in zone " + v.getZone());
+    });
+  }
+
+  public void loadStationData() {
+    final String dataFile = "data/stations.data";
+    Scanner sc;
+
+    try {
+      sc = new Scanner(new File(dataFile));
+
+      while (sc.hasNextLine()) {
+        if (!sc.hasNext()) {
+          break;
+        }
+        final String name = sc.next();
+        final int zone = sc.nextInt();
+        final double distance = sc.nextDouble();
+        stations.put(name, new Station(name, zone, distance));
+        // UI.println(name + " " + " zone: " + zone + " / dist: " + distance);
+      }
+
+    } catch (final FileNotFoundException e) {
+      e.printStackTrace();
+    }
+    UI.println("Stations loaded");
+
+  }
+
+  public void loadTrainLineData() {
+    final String dataFile = "data/train-lines.data";
+    Scanner sc;
+
+    try {
+      sc = new Scanner(new File(dataFile));
+
+      while (sc.hasNextLine()) {
+        if (!sc.hasNext()) {
+          break;
+        }
+        final String name = sc.next();
+        trainLines.put(name, new TrainLine(name));
+      }
+
+    } catch (final FileNotFoundException e) {
+      e.printStackTrace();
+    }
+    UI.println("Train Lines Loaded");
+
+    this.loadStationsOnLine();
+  }
+
+  public void loadStationsOnLine() {
+    trainLines.forEach((trainLineKey, trainLineVal) -> {
+      Scanner sc;
+      try {
+        sc = new Scanner(new File("data/" + trainLineKey + "-stations.data"));
+        while (sc.hasNext()) {
+
+          // 1. add station to the trainLine
+          final TrainLine trainLine = trainLines.get(trainLineKey);
+          final String stationName = sc.next();
+          final Station s = stations.get(stationName);
+          trainLine.addStation(s);
+
+          s.addTrainLine(trainLine);
+
+          // Station station = stations.get(trainLineVal);
+          // station.addTrainLine(trainLineVal);
+
+          // UI.print("**" + trainLineKey + "** ");
+          // UI.println(sc.next());
+        }
+      } catch (final FileNotFoundException e) {
+        e.printStackTrace();
+      }
+    });
+  }
+
+  /**
+   * Ask the user for a station name and assign it to the currentStationName field
+   * Must pass a collection of the names of the stations to getOptionFromList
+   */
+  public void setCurrentStation() {
+    final String name = getOptionFromList("Choose current station", stations.keySet());
+    if (name == null) {
+      return;
+    }
+    // Popup
+    UI.println("Setting current station to " + name);
+    currentStationName = name;
+    // displayCurrentValues();
+  }
+
+  /**
+   * Ask the user for a destination station name and assign it to the
+   * destinationName field Must pass a collection of the names of the stations to
+   * getOptionFromList
+   */
+  public void setDestinationStation() {
+    final String name = getOptionFromList("Choose destination station", stations.keySet());
+    if (name == null) {
+      return;
+    }
+    UI.println("Setting destination station to " + name);
+    destinationStationName = name;
+    // displayCurrentValues();
+    this.displayStationsInStatusBar();
+
+  }
+
+  /**
+   * Ask the user for a subway line and assign it to the currentLineName field
+   * Must pass a collection of the names of the lines to getOptionFromList
+   */
+  public void setCurrentLine() {
+    final String name = getOptionFromList("Choose current subway line", trainLines.keySet());
+    if (name == null) {
+      return;
+    }
+    UI.println("Setting current subway line to " + name);
+    // currentLineName = name;
+    this.displayStationsInStatusBar();
+  }
+
+  //
+  /**
+   * Method to get a string from a dialog box with a list of options
+   *
+   * Method written by VUW faculty for COMP102 assignment
+   *
+   * Just used for choosing station without typing.
+   *
+   * Can also select station from UI map (my code)
+   */
+  public String getOptionFromList(final String question, final Collection<String> options) {
+    final Object[] possibilities = options.toArray();
+    Arrays.sort(possibilities);
+    return (String) javax.swing.JOptionPane.showInputDialog(UI.getFrame(), question, "",
+        javax.swing.JOptionPane.PLAIN_MESSAGE, null, possibilities, possibilities[0].toString());
+  }
+
+  public static void main(final String[] args) {
+    new UserInterface();
+  }
 
 }
