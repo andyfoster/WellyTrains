@@ -3,6 +3,7 @@ import java.io.FileNotFoundException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Scanner;
 import java.util.Set;
 
@@ -15,8 +16,12 @@ public class UserInterface {
 
   private final HashMap<String, Station> stations = new HashMap<>();
   private final HashMap<String, TrainLine> trainLines = new HashMap<>();
+  private final HashMap<Integer, Double> fares = new HashMap<>();
 
   private final JButton timeButton;
+  private final JButton currentStationBtn;
+  private final JButton destStationBtn;
+  private final JButton listAllLinesBtn;
 
   private double pressedX = 0;
   private double pressedY = 0;
@@ -32,16 +37,25 @@ public class UserInterface {
       this.resetScreen();
     });
 
+    UI.addButton("Load fares", this::loadFares);
+
     UI.addButton("All Stations in Region", this::showAllStations);
     UI.addButton("All Train Lines in Region", this::showAllTrainLines);
     UI.addButton("Show All Info For All Train Lines", this::showAllInfoAllLines);
-    UI.addButton("Choose Current Station", this::setCurrentStation);
-    UI.addButton("Choose Destination Station", this::setDestinationStation);
-    UI.addButton("List All Lines through station", this::listAllLinesThroughStation);
-    UI.addButton("Find a route from Current to Destination", this::findARoute);
-    UI.addButton("Print lines through current station", this::printSimpleLinesForStation);
 
-    timeButton = UI.addButton("Set Time", this::setCurrentTime);
+    UI.addButton("", null);
+
+    timeButton = UI.addButton("Time: " + this.currentTime, this::setCurrentTime);
+    currentStationBtn = UI.addButton("Current Station: " + currentStationName, this::setCurrentStation);
+    destStationBtn = UI.addButton("Destination Stn: " + this.destinationStationName, this::setDestinationStation);
+
+    listAllLinesBtn = UI.addButton("List All Lines through " + this.currentStationName,
+        this::printSimpleLinesForStation);
+
+    // UI.addButton("Print lines and stations on line through current station",
+    // this::this::listAllLinesThroughStation);
+
+    UI.addButton("Find a route from Current to Destination", this::findARoute);
 
     this.loadAllData();
     this.resetScreen();
@@ -57,7 +71,7 @@ public class UserInterface {
 
     // Validate the time input
 
-    timeButton.setText(timeInput.toString());
+    timeButton.setText("Time: " + timeInput.toString());
     // UI.printMessage("You entered time: " + time);
   }
 
@@ -66,45 +80,70 @@ public class UserInterface {
     this.currentTime = time;
   }
 
+  /*
+   * Tries to find a route between two stations
+   */
   public void findARoute() {
     boolean onSameLine = false;
 
-    UI.println("Finding route from " + currentStationName + " to " + destinationStationName);
+    UI.println("Searching for route from "
+        + currentStationName +
+        " to " + destinationStationName +
+        " from " + currentTime + "...");
 
     // Find out if they share a line
 
-    Set linesForStation1 = stations.get(currentStationName).getTrainLines();
-    Set linesForStation2 = stations.get(destinationStationName).getTrainLines();
+    Station currentStation = stations.get(currentStationName);
+    Station destinationStation = stations.get(destinationStationName);
 
-    for (Object trainLineThroughStation1 : linesForStation1) { // TODO: work out why I can't use TrainLine here
-      // UI.println(tl.toString());
+    Set<TrainLine> linesForStation1 = stations.get(currentStationName).getTrainLines();
+    Set<TrainLine> linesForStation2 = stations.get(destinationStationName).getTrainLines();
+
+    Set<TrainLine> linesInCommon = new HashSet<>();
+
+    for (TrainLine trainLineThroughStation1 : linesForStation1) {
       if (linesForStation2.contains(trainLineThroughStation1)) {
         onSameLine = true;
-        UI.println("Match on " + trainLineThroughStation1);
-
-        for (int i = 0; i < linesForStation1.size(); i++) {
-          UI.println(i + " " + trainLineThroughStation1);
-
-          // TODO: up to here
-          // Need to get the lines that they are on and get the index of current station
-          // and destination station
-          // THe correct line /direction is the one where the currentSTation index <
-          // destination station index
-        }
-
+        linesInCommon.add(trainLineThroughStation1);
       }
     }
-    if (!onSameLine) {
-      UI.println("No match. You will have to transfer from ");
-      // TODO: " current_station.line + " to " + destination_station.line
 
+    if (onSameLine) {
+
+      for (TrainLine trainLine : linesInCommon) {
+        // UI.println(trainLine.toString());
+
+        int currentStationIdx = trainLine.getStations().indexOf(currentStation);
+        int destinationStationIdx = trainLine.getStations().indexOf(destinationStation);
+
+        if (currentStationIdx < destinationStationIdx) {
+          // UI.println("You are travelling in the right direction");
+
+          // find a service at or after the currentTime
+
+          for (TrainService trainService : trainLine.getTrainServices()) {
+
+            if (trainService.getTimes().get(currentStationIdx) >= Integer.parseInt(currentTime)) {
+              // UI.println("Found a service at or after the current time");
+
+              UI.println("Leaves " + currentStationName + " at " + trainService.getTimes().get(currentStationIdx));
+              UI.println("Arrives " + destinationStationName + " at "
+                  + trainService.getTimes().get(destinationStationIdx));
+              break;
+            }
+          }
+
+        } else {
+          // UI.println("You are travelling in the wrong direction");
+        }
+      }
     }
 
-    // if they do, find the one that comes after the other one
+    if (!onSameLine) {
+      UI.println("No match. You will have to transfer lines");
 
-    // if they don't, show an error to user
-    // use the complex version to use recursion to get a path from one station to
-    // another
+      // TODO: " current_station.line + " to " + destination_station.line
+    }
 
   }
 
@@ -117,17 +156,20 @@ public class UserInterface {
   }
 
   public void resetScreen() {
-    // UI.clearText();
+    UI.clearText();
+    UI.clearGraphics();
     UI.drawImage("data/system-map.png", 0, 0);
   }
+
+  // TODO: fix data for woodsite and matarawa
 
   public void mouseListener(final String action, final double x, final double y) {
 
     if ("pressed".equals(action)) {
       pressedX = x;
       pressedY = y;
-
     }
+
     if ("released".equals(action)) {
 
       UI.println(pressedX + " " + pressedY + " " + x + " " + y);
@@ -164,19 +206,6 @@ public class UserInterface {
 
       this.detectClickOnStation(x, y);
 
-      if ((x > 40.0) && (x < 121.0) && (y > 528.0) && (y < 544.0)) {
-        this.printLinesForStation("Simla-Crescent");
-
-        UI.drawRect(40, 528, 100, 15);
-      }
-
-      if ((x > 408.0) && (x < 468.0) && (y > 120.0) && (y < 139.0)) {
-        this.printLinesForStation("Carterton");
-      }
-
-      if ((x > 248.0) && (x < 394.0) && (y > 656.0) && (y < 679.0)) {
-        this.printLinesForStation("Wellington");
-      }
     }
   }
 
@@ -190,17 +219,14 @@ public class UserInterface {
     // UI.println("detectClickOnStation");
 
     stations.forEach((k, v) -> {
-      // UI.println(v.getName());
-      UI.println(v.getTopLeft() + " " + v.getTopRight() + " " + v.getBottomLeft() + " " + v.getBottomRight());
 
-      if ((x > v.getTopLeft()) && (x < v.getTopRight()) && (y > v.getBottomLeft()) && (y < v.getBottomRight())) {
-        // UI.println("Clicked on " + v.getName());
-        // this.printLinesForStation(v.getName());
+      if ((x > v.getLeftEdge()) && (x < v.getRightEdge()) && (y > v.getTopEdge()) && (y < v.getBottomEdge())) {
+        UI.println("Clicked on " + v.getName());
+        this.printLinesForStation(v.getName());
 
-        // UI.drawRect(v.getTopLeft(), v.getBottomLeft(), v.getTopRight() -
-        // v.getTopLeft(),
-        // v.getBottomRight() - v.getBottomLeft());
+        UI.drawRect(v.getLeftEdge(), v.getTopEdge(), v.calculateWidth(), v.calculateHeight());
       }
+
     });
 
   }
@@ -245,6 +271,33 @@ public class UserInterface {
         }
       }
     }
+  }
+
+  public void loadFares() {
+
+    Scanner sc;
+    try {
+      sc = new Scanner(new File("data/fares.data"));
+
+      sc.nextLine(); // skip the header lne
+
+      while (sc.hasNextLine()) {
+        if (!sc.hasNext()) {
+          break;
+        }
+        int zone = sc.nextInt();
+        double fare = sc.nextDouble();
+        fares.put(zone, fare);
+      }
+
+    } catch (FileNotFoundException e) {
+      e.printStackTrace();
+    }
+
+    fares.forEach((k, v) -> {
+      UI.println("zone: " + k + " $" + v);
+    });
+
   }
 
   public void loadAllData() {
@@ -452,8 +505,10 @@ public class UserInterface {
       return;
     }
     // Popup
-    UI.println("Setting current station to " + name);
+    // UI.println("Setting current station to " + name);
     currentStationName = name;
+    currentStationBtn.setText("Current Station: " + currentStationName);
+    listAllLinesBtn.setText("List All Lines through " + this.currentStationName);
     // displayCurrentValues();
   }
 
@@ -469,23 +524,10 @@ public class UserInterface {
     }
     UI.println("Setting destination station to " + name);
     destinationStationName = name;
+    destStationBtn.setText("Destination Station: " + destinationStationName);
     // displayCurrentValues();
     this.displayStationsInStatusBar();
 
-  }
-
-  /**
-   * Ask the user for a subway line and assign it to the currentLineName field
-   * Must pass a collection of the names of the lines to getOptionFromList
-   */
-  public void setCurrentLine() {
-    final String name = getOptionFromList("Choose current subway line", trainLines.keySet());
-    if (name == null) {
-      return;
-    }
-    UI.println("Setting current subway line to " + name);
-    // currentLineName = name;
-    this.displayStationsInStatusBar();
   }
 
   //
