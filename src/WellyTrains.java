@@ -79,21 +79,25 @@ public class WellyTrains {
 
     if (timeInput.length() != 4) { // stops 124
       UI.println("Invalid time");
+      this.setCurrentTime();
       return;
     }
 
     if (timeInput.charAt(2) > '5') { // stops 2360
       UI.println("Invalid time");
+      this.setCurrentTime();
       return;
     }
 
     if (timeInput.charAt(0) > '2') { // stops 3230
       UI.println("Invalid time");
+      this.setCurrentTime();
       return;
     }
 
     if (timeInput.charAt(0) == '2' && timeInput.charAt(1) > '3') { // stops 2400
       UI.println("Invalid time");
+      this.setCurrentTime();
       return;
     }
 
@@ -595,7 +599,6 @@ public class WellyTrains {
     destStationBtn.setText("Destination Station: " + destinationStationName);
     // displayCurrentValues();
     this.displayStationsInStatusBar();
-
   }
 
   //
