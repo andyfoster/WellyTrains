@@ -33,7 +33,6 @@ public class WellyTrains {
 
     UI.addButton("All Stations in Region", this::showAllStations);
     UI.addButton("All Train Lines in Region", this::showAllTrainLines);
-    // UI.addButton("Show All Info For All Train Lines", this::showAllInfoAllLines);
 
     UI.addButton("", null);
 
@@ -296,8 +295,6 @@ public class WellyTrains {
         this.resetGraphicsPane();
         this.currentStationName = v.getName();
         updateButtons();
-        // currentStationBtn.setText("Current Station: " + currentStationName);
-        // listAllLinesBtn.setText("List All Lines through " + currentStationName);
         drawBoxAroundStationName(v.getName());
         UI.drawRect(v.getLeftEdge(), v.getTopEdge(), v.calculateWidth(), v.calculateHeight());
       }
@@ -364,17 +361,7 @@ public class WellyTrains {
     UI.println("On Lines");
     for (final TrainLine tl : s.getTrainLines()) {
       UI.println("- " + tl.getName());
-      // for (int i = 0; i < tl.getStations().size(); i++) {
-      // UI.print(" " + i + ". ");
 
-      // UI.print(tl.getStations().get(i).getName());
-
-      // if (tl.getStations().get(i).getName().equals(s.getName())) {
-      // UI.println(" ***");
-      // } else {
-      // UI.println();
-      // }
-      // }
     }
   }
 
@@ -432,7 +419,6 @@ public class WellyTrains {
         for (final Integer time : service.getTimes()) {
           UI.println(time);
         }
-        // UI.println("-end of service-");
       }
     });
     UI.println("====");
@@ -460,13 +446,7 @@ public class WellyTrains {
         double bottomLeft = sc.nextDouble();
         double bottomRight = sc.nextDouble();
 
-        // UI.println("Here!");
-
-        // UI.println(name);
-        // UI.println(topLeft + " " + topRight + " " + bottomLeft + " " + bottomRight);
-        // UI.sleep(500);
         stations.get(name).setCoords(topLeft, topRight, bottomLeft, bottomRight);
-        // UI.println(name + " " + " zone: " + zone + " / dist: " + distance);
       }
 
     } catch (FileNotFoundException e) {
@@ -619,6 +599,8 @@ public class WellyTrains {
   /**
    * Ask the user for a station name and assign it to the currentStationName field
    * Must pass a collection of the names of the stations to getOptionFromList
+   *
+   * Adapted from COMP103 assignment starter code
    */
   public void setCurrentStation() {
     final String name = getOptionFromList("Choose current station", stations.keySet());
@@ -634,18 +616,18 @@ public class WellyTrains {
    * Ask the user for a destination station name and assign it to the
    * destinationName field Must pass a collection of the names of the stations to
    * getOptionFromList
+   *
+   * Adapted from COMP103 assignment starter code
    */
   public void setDestinationStation() {
     final String name = getOptionFromList("Choose destination station", stations.keySet());
     if (name == null) {
       return;
     }
-    // UI.println("Setting destination station to " + name);
     destinationStationName = name;
     updateButtons();
   }
 
-  //
   /**
    * Not my code
    * Method to get a string from a dialog box with a list of options
